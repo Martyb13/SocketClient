@@ -9,21 +9,31 @@ namespace SoketClient_Biagioni
     {
         static void Main(string[] args)
         {
-            Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            
+            Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);            
+
+            //Dichiarazione EndPoint del Server
+            IPAddress ipAddress = null;
             string strIPAddress = "";
             string strPort = "";
-            IPAddress ipAddress = null;
             int nPort;
+
+            //Dichiarazione Variabili per comunicare con il server
+            string sendString = "";
+            string receivedString = "";
+            byte[] sendBuff = new byte[128];
+            byte[] recvBuff = new byte[128];
+            int nReceivedBytes = 0;
 
             try
             {
-                Console.WriteLine("IP del server: ");
+                // Settagio da Console dell'EndPoint
+                Console.WriteLine("Benvenuto nel Client Socket");
+                Console.Write("IP del Server: ");
                 strIPAddress = Console.ReadLine();
-                Console.WriteLine("Porta del server: ");
+                Console.Write("Porta del Server: ");
                 strPort = Console.ReadLine();
-                
-                if(!IPAddress.TryParse(strIPAddress.Trim(), out ipAddress))
+
+                if (!IPAddress.TryParse(strIPAddress.Trim(), out ipAddress))
                 {
                     Console.WriteLine("IP non valido.");
                     return;
@@ -39,28 +49,31 @@ namespace SoketClient_Biagioni
                     return;
                 }
                 Console.WriteLine("End Point del Server " + ipAddress.ToString() + " " + nPort);
+
+                //Connessione al Server
                 client.Connect(ipAddress, nPort);
 
-                byte[] buff = new byte[128];
-                string sendString = "";
-                string receivedString = "";
-                int receivedBytes = 0;
+                //Inizio chat con il server
+                Console.WriteLine("Chatta con il server. ");
 
-                while(true)
+                while (true)
                 {
-                    Console.WriteLine("Manda un messaggio: ");
+                    // Prendo il messaggio & condizione di uscita
                     sendString = Console.ReadLine();
-                    Encoding.ASCII.GetBytes(sendString).CopyTo(buff, 0);
-                    client.Send(buff);
 
-                    if(sendString.ToUpper().Trim()=="QUI")
+                    //Dico al Server di interrompersi
+                    sendBuff = Encoding.ASCII.GetBytes(sendString);
+                    client.Send(sendBuff);
+
+                    if (sendString.ToUpper().Trim()=="QUI")
                     {
                         break;
                     }
 
-                    Array.Clear(buff, 0, buff.Length);
-                    receivedBytes = client.Receive(buff);
-                    receivedString = Encoding.ASCII.GetString(buff, 0, receivedBytes);
+                    //Pulisco il buffer e ricevo il messaggio
+                    Array.Clear(recvBuff, 0, recvBuff.Length);
+                    nReceivedBytes = client.Receive(recvBuff);
+                    receivedString = Encoding.ASCII.GetString(recvBuff);
                     Console.WriteLine("S: " + receivedString);
                 }
 
@@ -69,6 +82,21 @@ namespace SoketClient_Biagioni
             {
                 Console.WriteLine(ex.Message);
             }
+            finally
+            {
+                /* In ogni occasione chiudo la connessione per sicurezza */
+                if (client != null)
+                {
+                    if (client.Connected)
+                    {
+                        client.Shutdown(SocketShutdown.Both);//disabilita la send e receive
+                    }
+                    client.Close();
+                    client.Dispose();
+                }
+            }
+            Console.WriteLine("Premi Enter per chiudere...");
+            Console.ReadLine();
         }
     }
 }
